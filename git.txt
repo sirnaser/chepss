@@ -14,6 +14,15 @@ git remote add origin https://github.com/sirnaser/chess.git
 git push -u origin main
 
 git status
+git log
 git clone URL
 git init
 git add FILES
+git commit -m "MESSAGE"
+git push -u REPOSITORY BRANCH
+git bransh
+git bransh BRANCH_NAME
+git switch BRANCH
+git pull REPOSITORY BRANCH
+// git fetch && git merge
+git revert COMMIT_HASH

@@ -1,5 +1,6 @@
 
 git config --global credential.helper store
+git config --global core.editor "nano"
 // git config --global --edit
 git config --global user.name "Your Name"
 git config --global user.email "name@domain.example"
@@ -18,7 +19,7 @@ git log
 git clone URL
 git init
 git add FILES
-git commit -m "MESSAGE"
+git commit -a -m "MESSAGE"
 git push -u REPOSITORY BRANCH
 git bransh
 git bransh BRANCH_NAME
@@ -27,3 +28,12 @@ git pull REPOSITORY BRANCH
 // git fetch && git merge
 git revert COMMIT_HASH
 git reset --hard COMMIT_HASH
+// git push --force REPOSITORY BRANCH
+
+// back to the last commit
+git stash
+
+// back to the before stash
+git stash pop
+
+git checkout BRANCH

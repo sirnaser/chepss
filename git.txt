@@ -26,3 +26,4 @@ git switch BRANCH
 git pull REPOSITORY BRANCH
 // git fetch && git merge
 git revert COMMIT_HASH
+git reset --hard COMMIT_HASH

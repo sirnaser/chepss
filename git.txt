@@ -37,3 +37,7 @@ git stash
 git stash pop
 
 git checkout BRANCH
+git merge DIST_BRANCH SOURCE_BRANCH
+
+git push -d <remote_name> <branchname>   # Delete remote
+git branch -d <branchname>               # Delete local

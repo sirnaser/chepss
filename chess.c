@@ -63,95 +63,17 @@ piece* get_piece(char* pos){
     return board[pos[0]-'a'][pos[1]-'1'];
 }
 
-void reset_game(){
-    term = 1;
-
-    players[0] = (player){
-        {
-            {didntMoveYet,  black, king,   "e8", "♔"}, 
-            {didntMoveYet,  black, queen,  "d8", "♕"}, 
-            {didntMoveYet,  black, rook,   "a8", "♖"}, 
-            {didntMoveYet,  black, rook,   "h8", "♖"}, 
-            {didntMoveYet,  black, bishop, "c8", "♙"}, 
-            {didntMoveYet,  black, bishop, "f8", "♙"}, 
-            {didntMoveYet,  black, knight, "b8", "♘"}, 
-            {didntMoveYet,  black, knight, "g8", "♘"}, 
-            {didntMoveYet,  black, pawn,   "a7", "♙"}, 
-            {didntMoveYet,  black, pawn,   "b7", "♙"}, 
-            {didntMoveYet, black, pawn,   "c7", "♙"}, 
-            {didntMoveYet, black, pawn,   "d7", "♙"}, 
-            {didntMoveYet, black, pawn,   "e7", "♙"}, 
-            {didntMoveYet, black, pawn,   "f7", "♙"}, 
-            {didntMoveYet, black, pawn,   "g7", "♙"}, 
-            {didntMoveYet, black, pawn,   "h7", "♙"}
-        }
-    };
-
-    players[1] = (player){
-        {
-            {didntMoveYet,  white, king,   "e1", "♚"}, 
-            {didntMoveYet,  white, queen,  "d1", "♛"}, 
-            {didntMoveYet,  white, rook,   "a1", "♜"}, 
-            {didntMoveYet,  white, rook,   "h1", "♜"}, 
-            {didntMoveYet,  white, bishop, "c1", "♝"}, 
-            {didntMoveYet,  white, bishop, "f1", "♝"}, 
-            {didntMoveYet,  white, knight, "b1", "♞"}, 
-            {didntMoveYet,  white, knight, "g1", "♞"}, 
-            {didntMoveYet,  white, pawn,   "a2", "♟"}, 
-            {didntMoveYet,  white, pawn,   "b2", "♟"}, 
-            {didntMoveYet, white, pawn,   "c2", "♟"}, 
-            {didntMoveYet, white, pawn,   "d2", "♟"}, 
-            {didntMoveYet, white, pawn,   "e2", "♟"}, 
-            {didntMoveYet, white, pawn,   "f2", "♟"}, 
-            {didntMoveYet, white, pawn,   "g2", "♟"}, 
-            {didntMoveYet, white, pawn,   "h2", "♟"}
-        }
-    };
-
-    piece* somePiece;
-    for (char pl=0; pl<2; ++pl){
-        for (somePiece=players[pl].pieces; somePiece<=players[pl].pieces+15; ++somePiece){
-            set_piece(somePiece->pos, somePiece);
-        }
-    }
-    for (char pos[3]="a3";  pos[1]<='6'; ++pos[1]){
-        for (pos[0]='a';  pos[0]<='h'; ++pos[0]){
-            set_piece(pos, emptySquare);
-        }
-    }
-}
-
-void print_pos(int x, int y, char* str){
-    printf("e[1;1H");
-}
-
-void display(){
-    // reset color and clear the terminal
-    printf("\e[37;40m\e[1;1H\e[2J");
-
-    for (char pos[3]="a8"; pos[1]>='1'; --pos[1]){
-        printf( "\e[40m%c ", pos[1]);
-        for (pos[0]='a'; pos[0]<='h'; ++pos[0]){
-            printf((pos[0]&1)^(pos[1]&1)? "\e[100m": "\e[40m");
-            printf(" %s ", get_piece(pos)->symbol);
-        }
-        printf("\n");
-    }
-    printf( "\e[40m   a  b  c  d  e  f  g  h \n");
-}
 
 // validation
-// char is_king_move(char* move){
-char not_king_move(char* move){
-    return (abs(move[1]-move[3]) > 1)
-        || (abs(move[2]-move[4]) > 1);
+char not_pawn_move(char* move){
+    return (move[1] != move[3]) 
+        || ((term&1) && move[2] >= move[4])
+        || (!(term&1) && move[2] <= move[4])
+        || (abs(move[2]-move[4]) > 2)
+        || (abs(move[2]-move[4]) > 1 && get_piece(move+1)->status != didntMoveYet);
 }
 
-char not_queen_move(char* move){
-    return 0;
-}
-
-char not_rook_move(char* move){
+char not_knight_move(char* move){
     return 0;
 }
 
@@ -159,16 +81,17 @@ char not_bishop_move(char* move){
     return 0;
 }
 
-char not_knight_move(char* move){
+char not_rook_move(char* move){
     return 0;
 }
 
-char not_pawn_move(char* move){
-    return (move[1] != move[3]) 
-        || ((term&1) && move[2] >= move[4])
-        || (!(term&1) && move[2] <= move[4])
-        || (abs(move[2]-move[4]) > 2)
-        || (abs(move[2]-move[4]) > 1 && get_piece(move+1)->status != didntMoveYet);
+char not_queen_move(char* move){
+    return 0;
+}
+
+char not_king_move(char* move){
+    return (abs(move[1]-move[3]) > 1)
+        || (abs(move[2]-move[4]) > 1);
 }
 
 char not_in_board(char* pos){
@@ -259,6 +182,66 @@ char not_possible_move(char* move){
     return 0;
 }
 
+
+
+void reset_game(){
+    term = 1;
+
+    players[0] = (player){
+        {
+            {didntMoveYet,  black, king,   "e8", "♔"}, 
+            {didntMoveYet,  black, queen,  "d8", "♕"}, 
+            {didntMoveYet,  black, rook,   "a8", "♖"}, 
+            {didntMoveYet,  black, rook,   "h8", "♖"}, 
+            {didntMoveYet,  black, bishop, "c8", "♙"}, 
+            {didntMoveYet,  black, bishop, "f8", "♙"}, 
+            {didntMoveYet,  black, knight, "b8", "♘"}, 
+            {didntMoveYet,  black, knight, "g8", "♘"}, 
+            {didntMoveYet,  black, pawn,   "a7", "♙"}, 
+            {didntMoveYet,  black, pawn,   "b7", "♙"}, 
+            {didntMoveYet, black, pawn,   "c7", "♙"}, 
+            {didntMoveYet, black, pawn,   "d7", "♙"}, 
+            {didntMoveYet, black, pawn,   "e7", "♙"}, 
+            {didntMoveYet, black, pawn,   "f7", "♙"}, 
+            {didntMoveYet, black, pawn,   "g7", "♙"}, 
+            {didntMoveYet, black, pawn,   "h7", "♙"}
+        }
+    };
+
+    players[1] = (player){
+        {
+            {didntMoveYet,  white, king,   "e1", "♚"}, 
+            {didntMoveYet,  white, queen,  "d1", "♛"}, 
+            {didntMoveYet,  white, rook,   "a1", "♜"}, 
+            {didntMoveYet,  white, rook,   "h1", "♜"}, 
+            {didntMoveYet,  white, bishop, "c1", "♝"}, 
+            {didntMoveYet,  white, bishop, "f1", "♝"}, 
+            {didntMoveYet,  white, knight, "b1", "♞"}, 
+            {didntMoveYet,  white, knight, "g1", "♞"}, 
+            {didntMoveYet,  white, pawn,   "a2", "♟"}, 
+            {didntMoveYet,  white, pawn,   "b2", "♟"}, 
+            {didntMoveYet, white, pawn,   "c2", "♟"}, 
+            {didntMoveYet, white, pawn,   "d2", "♟"}, 
+            {didntMoveYet, white, pawn,   "e2", "♟"}, 
+            {didntMoveYet, white, pawn,   "f2", "♟"}, 
+            {didntMoveYet, white, pawn,   "g2", "♟"}, 
+            {didntMoveYet, white, pawn,   "h2", "♟"}
+        }
+    };
+
+    piece* somePiece;
+    for (char pl=0; pl<2; ++pl){
+        for (somePiece=players[pl].pieces; somePiece<=players[pl].pieces+15; ++somePiece){
+            set_piece(somePiece->pos, somePiece);
+        }
+    }
+    for (char pos[3]="a3";  pos[1]<='6'; ++pos[1]){
+        for (pos[0]='a';  pos[0]<='h'; ++pos[0]){
+            set_piece(pos, emptySquare);
+        }
+    }
+}
+
 void do_move(char* move){
     piece* pcpt1 = get_piece(move+1);
     piece* pcpt2 = get_piece(move+3);
@@ -271,6 +254,24 @@ void do_move(char* move){
     pcpt2->status = 0; // dead
 }
 
+void print_pos(int x, int y, char* str){
+    printf("e[1;1H");
+}
+
+void display(){
+    printf("\e[37;40m\e[1;1H\e[2J");
+
+    for (char pos[3]="a8"; pos[1]>='1'; --pos[1]){
+        printf( "\e[40m%c ", pos[1]);
+        for (pos[0]='a'; pos[0]<='h'; ++pos[0]){
+            printf((pos[0]&1)^(pos[1]&1)? "\e[100m": "\e[40m");
+            printf(" %s ", get_piece(pos)->symbol);
+        }
+        printf("\n");
+    }
+    printf( "\e[40m   a  b  c  d  e  f  g  h \n");
+}
+
 void goto_n(int n){
 
 }
@@ -280,10 +281,11 @@ int main()
     // ♔♕♗♘♙♖♚♛♝♞♟♜
 
     reset_game();
-    display();
 
     char move[20];
     while (1){
+        display();
+
         printf("%i.%i> ", (term+1)/2, !(term&1));
         scanf("%s", move);
 
@@ -305,7 +307,7 @@ int main()
             char type;
             printf("which type do you prefer?");
             scanf("%d", &type);
-
+            // transform
         }
         term++;
 
@@ -317,7 +319,7 @@ int main()
             move[1] = somePiece->pos[0];
             move[2] = somePiece->pos[1];
             
-            for (move[4]='1';  move[4]<='6'; ++move[4]){
+            for (move[4]='1';  move[4]<='8'; ++move[4]){
                 if (thereIsAPossibleMove) break;
                 for (move[3]='a';  move[3]<='h'; ++move[3]){
                     if (!not_possible_move(move)){

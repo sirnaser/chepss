@@ -6,6 +6,7 @@
 // piece status
 #define dead            0
 #define didntMoveYet    1
+#define movedOnceBefore 2
 
 // pice owner
 #define black   0
@@ -163,10 +164,10 @@ char not_possible_move(char* move){
 
     set_piece(move+1, emptySquare);
     set_piece(move+3, pcpt1);
-    pcpt1->pos[0] = move[3]; pcpt1->pos[1] = move[4]; 
 
-    pcpt1->status = 2; // moved once before
-    pcpt2->status = 0; // dead
+    pcpt1->pos[0] = move[3]; pcpt1->pos[1] = move[4]; 
+    pcpt1->status = movedOnceBefore;
+    pcpt2->status = dead;
 
 
     char isChecked = is_checked();
@@ -248,10 +249,10 @@ void do_move(char* move){
     
     set_piece(move+1, emptySquare);
     set_piece(move+3, pcpt1);
-    pcpt1->pos[0] = move[3]; pcpt1->pos[1] = move[4]; 
 
-    pcpt1->status = 2; // moved once before
-    pcpt2->status = 0; // dead
+    pcpt1->pos[0] = move[3]; pcpt1->pos[1] = move[4];
+    pcpt1->status = movedOnceBefore;
+    pcpt2->status = dead;
 }
 
 void print_pos(int x, int y, char* str){

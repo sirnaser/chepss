@@ -1,5 +1,4 @@
 // includes
-    #include <ctype.h>
     #include <stdio.h>
 // 
 
@@ -67,8 +66,8 @@ char g_quit;
 // utility functions
     #define abs(x)      (x>0? x: -x)
     #define sign(x)     (x>0? 1: x<0? -1: 0)
-    #define dif_x(move) move[3]-move[1]
-    #define dif_y(move) move[4]-move[2]
+    #define dif_x(move) (move[2]-move[0])
+    #define dif_y(move) (move[3]-move[1])
     #define dis_x(move) abs(dif_x(move))
     #define dis_y(move) abs(dif_y(move))
 
@@ -93,9 +92,9 @@ char g_quit;
     #define MRC_ANY_INTERVENING_PIECE   6
     char any_intervening_piece(char* move){
         char dir_x = sign(dif_x(move)), dir_y = sign(dif_y(move));
-        char pos[3] = {move[1]+dir_x, move[2]+dir_y};
+        char pos[3] = {move[0]+dir_x, move[1]+dir_y};
         char step = 1;
-        for (; pos[0]!=move[3]&&pos[1]!=move[4]; ){
+        for (; pos[0]!=move[2]&&pos[1]!=move[3]; ){
             if (get_board(pos)->type != NONE){
                 return step;
             }
@@ -109,7 +108,7 @@ char g_quit;
     char not_pawn_move(char* move){
         // TODO : En passant
         if (dif_x(move)) return 1;
-        if (get_board(move+1)->status == DID_NOT_MOVE_YET){
+        if (get_board(move)->status == DID_NOT_MOVE_YET){
             if ((Term&1) && dif_y(move) <= 0) return 2;
             if (!(Term&1) && dif_y(move) >= 0) return 3;
             if (dis_y(move) > 2) return 4;
@@ -132,12 +131,12 @@ char g_quit;
             + MRC_ANY_INTERVENING_PIECE
     char not_bishop_move(char* move){
         if (dis_x(move) != dis_y(move)) return 1;
-        if (move[1] <= 'd'){
+        if (move[0] <= 'd'){
             if (dif_x(move) <= 0) return 2;
         } else {
             if (dif_x(move) >= 0) return 3;
         }
-        // if (move[2] <= '4'){
+        // if (move[1] <= '4'){
         //     if (dif_y(move) <= 0) return 4;
         // } else {
         //     if (dif_y(move) >= 0) return 5;
@@ -193,37 +192,40 @@ char g_quit;
     char not_valid_move(char* move){
         char passed = 0, error;
 
-        if ((error = not_in_board(move+1))) return passed+error;
+        if ((error = not_in_board(move))) return passed+error;
         passed += MRC_NOT_IN_BOARD;
 
-        if ((error = not_in_board(move+3))) return passed+error;
+        if ((error = not_in_board(move+2))) return passed+error;
         passed += MRC_NOT_IN_BOARD;
 
-        if ((error = get_board(move+1)->status == DEAD)) return passed+error;
+        piece* p_pc1 = get_board(move);
+        piece* p_pc2 = get_board(move+2);
+
+        if ((error = p_pc1->status == DEAD)) return passed+error;
         passed++;
 
-        if ((error = get_board(move+1)->owner != (Term&1))) return passed+error;
+        if ((error = p_pc1->owner != (Term&1))) return passed+error;
         passed++;
 
-        if ((error = get_board(move+3)->owner == (Term&1))) return passed+error;
+        if ((error = p_pc2->owner == (Term&1))) return passed+error;
         passed++;
 
-        if (*move == 'P' && (error = not_pawn_move(move+1))) return passed+error;
+        if (p_pc1->type == PAWN && (error = not_pawn_move(move))) return passed+error;
         passed += MRC_NOT_PAWN_MOVE;
 
-        if (*move == 'N' && (error = not_knight_move(move+1))) return passed+error;
+        if (p_pc1->type == KNIGHT && (error = not_knight_move(move))) return passed+error;
         passed += MRC_NOT_KNIGHT_MOVE;
         
-        if (*move == 'B' && (error = not_bishop_move(move+1))) return passed+error;
+        if (p_pc1->type == BISHOP && (error = not_bishop_move(move))) return passed+error;
         passed += MRC_NOT_BISHOP_MOVE;
         
-        if (*move == 'R' && (error = not_rook_move(move+1))) return passed+error;
+        if (p_pc1->type == ROOK && (error = not_rook_move(move))) return passed+error;
         passed += MRC_NOT_ROOK_MOVE;
         
-        if (*move == 'Q' && (error = not_queen_move(move+1))) return passed+error;
+        if (p_pc1->type == QUEEN && (error = not_queen_move(move))) return passed+error;
         passed += MRC_NOT_QUEEN_MOVE;
         
-        if (*move == 'K' && (error = not_king_move(move+1))) return passed+error;
+        if (p_pc1->type == KING && (error = not_king_move(move))) return passed+error;
         passed += MRC_NOT_KING_MOVE;
 
         return 0;
@@ -231,14 +233,13 @@ char g_quit;
 
     #define MRC_IS_CHECKED              16
     char is_checked(){
-        char move[6];
-        move[3] = Players[(Term&1)].pieces[0].pos[0];
-        move[4] = Players[(Term&1)].pieces[0].pos[1];
+        char move[5] = "";
+        move[2] = Players[(Term&1)].pieces[0].pos[0];
+        move[3] = Players[(Term&1)].pieces[0].pos[1];
 
         for (piece* p_pc=Players[!(Term&1)].pieces; p_pc<=Players[!(Term&1)].pieces+15; ++p_pc){
-            move[0] = MOVEMENT_SYMBOLS[p_pc->type];
-            move[1] = p_pc->pos[0];
-            move[2] = p_pc->pos[1];
+            move[0] = p_pc->pos[0];
+            move[1] = p_pc->pos[1];
 
             if (!not_valid_move(move)){
                 return (p_pc-Players[!(Term&1)].pieces)+1;
@@ -248,23 +249,24 @@ char g_quit;
         return 0;
     }
 
-    #define MRC_NOT_POSSIBLE_MOVE       10
+    #define MRC_NOT_POSSIBLE_MOVE       MRC_NOT_VALID_MOVE  \
+            + MRC_IS_CHECKED
     char not_possible_move(char* move){
         char passed = 0, error;
 
         if ((error=not_valid_move(move))) return passed+error;
         passed += MRC_NOT_VALID_MOVE;
 
-        piece* p_pc1 = get_board(move+1);
-        piece* p_pc2 = get_board(move+3);
+        piece* p_pc1 = get_board(move);
+        piece* p_pc2 = get_board(move+2);
         
         piece pc1 = *p_pc1;
         piece pc2 = *p_pc2;
 
-        set_board(move+1, p_Unoccupied);
-        set_board(move+3, p_pc1);
+        set_board(move, p_Unoccupied);
+        set_board(move+2, p_pc1);
 
-        p_pc1->pos[0] = move[3]; p_pc1->pos[1] = move[4]; 
+        p_pc1->pos[0] = move[2]; p_pc1->pos[1] = move[3];
         p_pc1->status = MOVED_ONCE_BEFORE;
         p_pc2->status = DEAD;
 
@@ -275,8 +277,8 @@ char g_quit;
         *p_pc1 = pc1;
         *p_pc2 = pc2;
 
-        set_board(move+1, p_pc1);
-        set_board(move+3, p_pc2);
+        set_board(move, p_pc1);
+        set_board(move+2, p_pc2);
 
         if (error) return passed+error;
         passed += MRC_IS_CHECKED;
@@ -286,15 +288,14 @@ char g_quit;
 
     #define MRC_ANY_POSSIBLE_MOVE       1
     char any_possible_move(){
-        char move[6];
+        char move[5] = "";
 
         for (piece* p_pc=Players[(Term&1)].pieces; p_pc<=Players[(Term&1)].pieces+15; ++p_pc){
-            move[0] = MOVEMENT_SYMBOLS[p_pc->type];
-            move[1] = p_pc->pos[0];
-            move[2] = p_pc->pos[1];
+            move[0] = p_pc->pos[0];
+            move[1] = p_pc->pos[1];
             
-            for (move[4]='1';  move[4]<='8'; ++move[4]){
-                for (move[3]='a';  move[3]<='h'; ++move[3]){
+            for (move[3]='1';  move[3]<='8'; ++move[3]){
+                for (move[2]='a';  move[2]<='h'; ++move[2]){
                     if (!not_possible_move(move)){
                         return 1;
                     }
@@ -383,43 +384,45 @@ char g_quit;
         return 0;
     }
 
-    char get_action(char* move){
+    char get_action(char* movement){
         printf("%i.%i> ", (Term+1)/2, !(Term&1));
-        scanf("%s", move);
+        scanf("%s", movement);
+        getchar();
 
-        if ('0' <= move[0] && move[0] <= '9'){
+        if ('0' <= movement[0] && movement[0] <= '9'){
             // goto term
             return 1;
         }
 
-        if ('1' <= move[1] && move[1] <= '8'){
-            for (char i=3; i >= 0; --i) move[i+1] = move[i];
-            move[0] = MOVEMENT_SYMBOLS[get_board(move+1)->type];
+        if ('1' <= movement[1] && movement[1] <= '8'){
+            for (char i=3; i >= 0; --i) movement[i+1] = movement[i];
         }
-        *move = toupper(*move);
-        move[5] = '\0';
+        if (not_in_board(movement+1)) return 1;
+        movement[0] = MOVEMENT_SYMBOLS[get_board(movement+1)->type];
+        movement[5] = '\0';
 
         return 0;
     }
 
-    char validate_action(char* move){
-        char error = not_possible_move(move);
+    char validate_action(char* movement){
+        char error = not_possible_move(movement+1);
         if (error){
             printf("error code: %i\n", error);
             // printf("%s\n", ERROR_MESSAGES[error]);
+            while (getchar() != '\n');
             return 1;
         }
         return 0;
     }
 
-    char apply_action(char* move){
-        piece* p_pc1 = get_board(move+1);
-        piece* p_pc2 = get_board(move+3);
+    char apply_action(char* movement){
+        piece* p_pc1 = get_board(movement+1);
+        piece* p_pc2 = get_board(movement+3);
         
-        set_board(move+1, p_Unoccupied);
-        set_board(move+3, p_pc1);
+        set_board(movement+1, p_Unoccupied);
+        set_board(movement+3, p_pc1);
 
-        p_pc1->pos[0] = move[3]; p_pc1->pos[1] = move[4];
+        p_pc1->pos[0] = movement[3]; p_pc1->pos[1] = movement[4];
         p_pc1->status = MOVED_ONCE_BEFORE;
         p_pc2->status = DEAD;
 
@@ -435,7 +438,7 @@ char g_quit;
                 scanf("%d", &type);
             }
 
-            piece* p_pc1 = get_board(move+3);
+            piece* p_pc1 = get_board(movement+3);
             p_pc1->type = type;
             p_pc1->symbol[0] = PIECE_SYMBOLS[(Term&1)][type][0];
             p_pc1->symbol[1] = PIECE_SYMBOLS[(Term&1)][type][1];
@@ -444,7 +447,7 @@ char g_quit;
 
         // TODO : castling
 
-        sprintf(Moves[Term++], "%s", move);
+        sprintf(Moves[Term++], "%s", movement);
         if (Term>MaxTerm) MaxTerm=Term;
         return 0;
     }

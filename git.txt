@@ -1,4 +1,18 @@
 
+    #define MRC_NOT_SAFE_MOVE               1
+    char not_safe_move(char* move){
+
+        return 0;
+    }
+
+
+    #define MRC_NOT_LEGAL_MOVE          \
+            + MRC_NOT_IN_BOARD*2        \
+            + 3 + 6
+
+
+
+
 git config --global credential.helper store
 git config --global core.editor "nano"
 // git config --global --edit

@@ -149,11 +149,11 @@
         } else {
             if (dif_x(move) >= 0) return 3;
         }
-        if (move[1] <= '4'){
-            if (dif_y(move) <= 0) return 4;
-        } else {
-            if (dif_y(move) >= 0) return 5;
-        }
+        // if (move[1] <= '4'){
+        //     if (dif_y(move) <= 0) return 4;
+        // } else {
+        //     if (dif_y(move) >= 0) return 5;
+        // }
         char step;
         if ((step=any_intervening_piece(move))) return 5+step;
         return 0;

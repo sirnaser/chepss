@@ -1,55 +1,13 @@
-
-       ╭────────────────────────╮       No. white  black │ No. white  black 
-     8 │ ♖  ♘  ♙  ♕  ♔  ♙  ♘  ♖ │  ♕♖  ──────────────────┼─────────────────
-     7 │ ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙ │  ♖♘   1   Pe2e4  Pe4e2 │   9 Pe2e4  Pe4e2 
-     6 │                        │  ♙    2   Pe2e4  Pe4e2 │  10 Pe2e4  Pe4e2 
-     5 │                        │       3   Pe2e4  Pe4e2 │  11 Pe2e4  Pe4e2 
-     4 │                        │         4 Pe2e4  Pe4e2 │  12 Pe2e4  Pe4e2 
-  ♟  3 │                        │         5 Pe2e4  Pe4e2 │  13 Pe2e4  Pe4e2 
- ♟♞  2 │ ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ │         6 Pe2e4  Pe4e2 │  14 Pe2e4  Pe4e2 
- ♜♜  1 │ ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ │         7 Pe2e4  Pe4e2 │  15 Pe2e4   
-       ╰────────────────────────╯         8 Pe2e4  Pe4e2 │ 
-         a  b  c  d  e  f  g  h
-
-
-       ╭────────────────────────╮       No. white  black │ No. white  black 
-     8 │ ♖  ♘  ♙  ♕  ♔  ♙  ♘  ♖ │  ♕♖  ──────────────────┼─────────────────
-     7 │ ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙ │  ♖♘   1   Pe2e4  Pe4e2 │   9 Pe2e4  Pe4e2 
-     6 │                        │  ♙    2   Pe2e4  Pe4e2 │  10 Pe2e4  Pe4e2 
-     5 │                        │       3   Pe2e4  Pe4e2 │  11 Pe2e4  Pe4e2 
-     4 │                        │         4 Pe2e4  Pe4e2 │  12 Pe2e4  Pe4e2 
-  ♟  3 │                        │         5 Pe2e4  Pe4e2 │  13 Pe2e4  Pe4e2 
- ♟♞  2 │ ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ │         6 Pe2e4  Pe4e2 │  14 Pe2e4  Pe4e2 
- ♜♜  1 │ ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ │         7 Pe2e4  Pe4e2 │  15 Pe2e4   
-       ╰─a──b──c──d──e──f──g──h─╯         8 Pe2e4  Pe4e2 │ 
-
-
-
-
-      ╭────────────────────────╮       No. white  black │ No. white  black 
-     8│ ♖  ♘  ♙  ♕  ♔  ♙  ♘  ♖ │  ♕♖  ──────────────────┼─────────────────
-     7│ ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙ │  ♖♘   1   Pe2e4  Pe4e2 │   9 Pe2e4  Pe4e2 
-     6│                        │  ♙    2   Pe2e4  Pe4e2 │  10 Pe2e4  Pe4e2 
-     5│                        │       3   Pe2e4  Pe4e2 │  11 Pe2e4  Pe4e2 
-     4│                        │         4 Pe2e4  Pe4e2 │  12 Pe2e4  Pe4e2 
-  ♟  3│                        │         5 Pe2e4  Pe4e2 │  13 Pe2e4  Pe4e2 
- ♟♞  2│ ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ │         6 Pe2e4  Pe4e2 │  14 Pe2e4  Pe4e2 
- ♜♜  1│ ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ │         7 Pe2e4  Pe4e2 │  15 Pe2e4   
-      ╰─a──b──c──d──e──f──g──h─╯         8 Pe2e4  Pe4e2 │ 
-
-
-
-
      ╭────────────────────────╮      No. white  black │ No. white  black 
     8│ ♖  ♘  ♙  ♕  ♔  ♙  ♘  ♖ │ ♕♖  ──────────────────┼─────────────────
-    7│ ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙ │ ♖♘   1   Pe2e4  Pe4e2 │   9 Pe2e4  Pe4e2 
-    6│                        │ ♙    2   Pe2e4  Pe4e2 │  10 Pe2e4  Pe4e2 
-    5│                        │      3   Pe2e4  Pe4e2 │  11 Pe2e4  Pe4e2 
-    4│                        │        4 Pe2e4  Pe4e2 │  12 Pe2e4  Pe4e2 
-  ♟ 3│                        │        5 Pe2e4  Pe4e2 │  13 Pe2e4  Pe4e2 
- ♟♞ 2│ ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ │        6 Pe2e4  Pe4e2 │  14 Pe2e4  Pe4e2 
- ♜♜ 1│ ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ │        7 Pe2e4  Pe4e2 │  15 Pe2e4   
-     ╰─a──b──c──d──e──f──g──h─╯        8 Pe2e4  Pe4e2 │ 
+    7│ ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙ │ ♖♘   1   Pe2e4  Pe4e2 │ 9   Pe2e4  Pe4e2 
+    6│                        │ ♙    2   Pe2e4  Pe4e2 │ 10  Pe2e4  Pe4e2 
+    5│                        │      3   Pe2e4  Pe4e2 │ 11  Pe2e4  Pe4e2 
+    4│                        │      4   Pe2e4  Pe4e2 │ 12  Pe2e4  Pe4e2 
+  ♟ 3│                        │      5   Pe2e4  Pe4e2 │ 13  Pe2e4  Pe4e2 
+ ♟♞ 2│ ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ │      6   Pe2e4  Pe4e2 │ 14  Pe2e4  Pe4e2 
+ ♜♜ 1│ ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ │      7   Pe2e4  Pe4e2 │ 15  Pe2e4   
+     ╰─a──b──c──d──e──f──g──h─╯      8   Pe2e4  Pe4e2 │ 
 
 
 

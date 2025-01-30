@@ -5,6 +5,30 @@
     #include <unistd.h>
 // 
 
+// theme
+    // 1: bold 
+    // 2: shadow
+    // 3: italic
+    // 4: underlined
+    // 5: blinking 
+    // 6: blinking
+    // 7: color reveresed
+    // 8: hide 
+    // 9: lined 
+    // 30-37: foreground color
+    // 40-47: background color
+    // 90-97:   light foreground color
+    // 100-107: light background color
+    // 0: black, 1: red, 2: green, 3: yellow, 4: blue, 5: magenta, 6: cyan, 7: white
+
+    #define THEME_DEFAULT       "\e[0m"
+    #define THEME_ERROR         "\e[1m"
+    #define THEME_RESPONSE      "\e[2m"
+    #define THEME_PROMPT        "\e[3m"
+    #define THEME_LINK          "\e[4m"
+    #define THEME_LAST_ACTION   "\e[5m"
+    #define THEME_HIGHLIGHT     "\e[100m"
+// 
 
 // data structures
     // piece.owner
@@ -45,6 +69,8 @@
 // 
 
 // variables
+    #define BOARD(pos)     Board[(pos)[0]-'a'][(pos)[1]-'1']
+
     char g_quit, g_exit;
     int Turn, MaxTurn;
     char Moves[1000][6];
@@ -65,23 +91,6 @@
 // 
 
 
-// utility
-    void set_board(char* pos, piece* pc){
-        Board[pos[0]-'a'][pos[1]-'1'] = pc;
-    }
-
-    piece* get_board(char* pos){
-        return Board[pos[0]-'a'][pos[1]-'1'];
-    }
-
-    void print_in(int row, int col, char* str){
-        char moveCursor[20];
-        sprintf(moveCursor, "\e[%d;%dH", row, col);
-        printf("%s%s", moveCursor, str);
-    }
-// 
-
-
 // validation
     #define abs(x)      (x>0? x: -x)
     #define sign(x)     (x>0? 1: x<0? -1: 0)
@@ -97,7 +106,7 @@
         char pos[3] = {move[0]+dir[0], move[1]+dir[1]};
         char step = 1;
         for (; pos[0]!=move[2]||pos[1]!=move[3]; ){
-            if (get_board(pos)->type != NONE){
+            if (BOARD(pos)->type != NONE){
                 return step;
             }
             pos[0]+=dir[0], pos[1]+=dir[1];
@@ -110,16 +119,16 @@
     char not_pawn_move(char* move){
         // TODO : En passant
         if (dif_x(move)) return 1;
-        if (get_board(move)->status == DID_NOT_MOVE_YET){
-            if (get_board(move)->owner == WHITE && dif_y(move) <= 0) return 2;
-            if (get_board(move)->owner == BLACK && dif_y(move) >= 0) return 3;
+        if (BOARD(move)->status == DID_NOT_MOVE_YET){
+            if (BOARD(move)->owner == WHITE && dif_y(move) <= 0) return 2;
+            if (BOARD(move)->owner == BLACK && dif_y(move) >= 0) return 3;
             if (dis_y(move) > 2) return 4;
             if (dis_y(move) == 2){
                 if (any_intervening_piece(move)) return 5;
-                if (get_board(move+2)->type != NONE) return 6;
+                if (BOARD(move+2)->type != NONE) return 6;
             }
         }
-        if (get_board(move)->status == MOVED_ONCE_BEFORE 
+        if (BOARD(move)->status == MOVED_ONCE_BEFORE 
         && dis_y(move) > 1) return 7;
         return 0;
     }
@@ -196,8 +205,8 @@
         if ((error = not_in_board(move+2))) return passed+error;
         passed += MRC_NOT_IN_BOARD;
 
-        piece* p_pc1 = get_board(move);
-        piece* p_pc2 = get_board(move+2);
+        piece* p_pc1 = BOARD(move);
+        piece* p_pc2 = BOARD(move+2);
 
         if ((error = p_pc1->status == DEAD)) return passed+error;
         passed++;
@@ -218,7 +227,7 @@
             + MRC_NOT_KING_MOVE
     char not_valid_move(char* move){
         char passed = 0, error;
-        char type = get_board(move)->type;
+        char type = BOARD(move)->type;
 
         if (type == PAWN && (error = not_pawn_move(move))) return passed+error;
         passed += MRC_NOT_PAWN_MOVE;
@@ -259,22 +268,22 @@
     char not_safe_move(char* move){
         char error;
         
-        piece* p_pc1 = get_board(move);
-        piece* p_pc2 = get_board(move+2);
+        piece* p_pc1 = BOARD(move);
+        piece* p_pc2 = BOARD(move+2);
         piece pc1 = *p_pc1;
         piece pc2 = *p_pc2;
 
         // TODO : castling
-        set_board(move, p_Unoccupied);
-        set_board(move+2, p_pc1);
+        BOARD(move) = p_Unoccupied;
+        BOARD(move+2) = p_pc1;
         p_pc1->pos[0] = move[2]; p_pc1->pos[1] = move[3];
         p_pc1->status = MOVED_ONCE_BEFORE;
         p_pc2->status = DEAD;
         error = is_checked();
         *p_pc1 = pc1;
         *p_pc2 = pc2;
-        set_board(move, p_pc1);
-        set_board(move+2, p_pc2);
+        BOARD(move) = p_pc1;
+        BOARD(move+2) = p_pc2;
 
         if (error) return error;
         return 0;
@@ -301,99 +310,104 @@
 
 // game control
     char display(){
-        printf("\e[37;40m\e[1;1H\e[2J");
-        char str[30];
+        printf(THEME_DEFAULT"\e[1;1H\e[2J");
         int row, col;
 
         // board
-            row = 2; col = 8;
+            row = 2; col = 7;
             for (char pos[3]="a1"; pos[0]<='h'; ++pos[0]){
                 for (pos[1]='1'; pos[1]<='8'; ++pos[1]){
-                    printf((pos[0]&1)^(pos[1]&1)? "\e[100m": "\e[40m");
-                    sprintf(str, " %s ", get_board(pos)->symbol);
-                    print_in(row+('8'-pos[1]), col+(pos[0]-'a')*3, str);
+                    printf((pos[0]&1)^(pos[1]&1)? THEME_HIGHLIGHT: THEME_DEFAULT);
+                    if (Turn-1 >= 1 
+                     && Moves[Turn-1][3] == pos[0]
+                     && Moves[Turn-1][4] == pos[1]){
+                        printf(THEME_LAST_ACTION);
+                    }
+                    printf("\e[%d;%dH %s ", row+('8'-pos[1]), col+(pos[0]-'a')*3, BOARD(pos)->symbol);
                 }
             }
         // 
 
         // border and labels
-            row = 1; col = 6;
-            print_in(row, col+1, "╭────────────────────────╮");
-            print_in(row+9, col+1, "╰─a──b──c──d──e──f──g──h─╯");
+            printf(THEME_DEFAULT);
+            row = 1; col = 5;
+            printf("\e[%d;%dH%s", row, col+1, "╭────────────────────────╮");
+            printf("\e[%d;%dH%s", row+9, col+1, "╰─a──b──c──d──e──f──g──h─╯");
             for (char y[2]="8"; y[0]>='1'; --y[0]){
-                print_in(row+1+('8'-y[0]), col, y);
-                print_in(row+1+('8'-y[0]), col+1, "│");
-                print_in(row+1+('8'-y[0]), col+26, "│");
+                printf("\e[%d;%dH%s", row+1+('8'-y[0]), col, y);
+                printf("\e[%d;%dH%s", row+1+('8'-y[0]), col+1, "│");
+                printf("\e[%d;%dH%s", row+1+('8'-y[0]), col+26, "│");
             }
         // 
 
         // dead pieces
+            printf(THEME_DEFAULT);
             char death = 0;
             row = 9; col = 2;
             for (piece* p_pc=Players[WHITE].pieces; p_pc<=Players[WHITE].pieces+15; ++p_pc){
                 if (p_pc->status == DEAD){
-                    print_in(row-(death/2) ,col+!(death&1), p_pc->symbol);
+                    printf("\e[%d;%dH%s", row-(death/2) ,col+!(death&1), p_pc->symbol);
                     death++;
                 }
             }
 
             death = 0;
-            row = 2; col = 35;
+            row = 2; col = 33;
             for (piece* p_pc=Players[BLACK].pieces; p_pc<=Players[BLACK].pieces+15; ++p_pc){
                 if (p_pc->status == DEAD){
-                    print_in(row+(death/2) ,col+(death&1), p_pc->symbol);
+                    printf("\e[%d;%dH%s", row+(death/2) ,col+(death&1), p_pc->symbol);
                     death++;
                 }
             }
         // 
 
         // table of moves
+            printf(THEME_DEFAULT);
             struct winsize w;
             ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-            int move = MaxTurn-((w.ws_col-38)/19*16);
+            row = 1; col = 37;
+            int width = 19, r;
+            int move = MaxTurn-((w.ws_col-col+1)/width*8*2);
             if (!(move&1)) move++;
             if (Turn-1 < move) move = Turn-1;
             if (!(move&1)) move--;
             if (move <= 0) move = 1;
 
-            int r;
-            row = 1; col = 39;
-            while (col+18 <= w.ws_col){
+            while (col+width-1 <= w.ws_col){
                 r = row;
-                print_in(r++, col, " No. white  black ");
-                print_in(r++, col, "──────────────────");
+                printf("\e[%d;%dH%s", r++, col, " No. white  black ");
+                printf("\e[%d;%dH%s", r++, col, "──────────────────");
                 for (; r<=10; ++r){
                     if (move >= MaxTurn) break;
-                    sprintf(str, " %-3d %s%s%s  %s%s%s ", (move+1)/2, 
-                    (move+1==Turn? "\e[100m": ""), Moves[move], (move+1==Turn? "\e[40m": ""), 
-                    (move+2==Turn? "\e[100m": ""), Moves[move+1], (move+2==Turn? "\e[40m": ""));
-                    print_in(r, col, str);
+                    printf("\e[%d;%dH %-3d %s%s%s  %s%s%s ", r, col, (move+1)/2, 
+                    (move+1==Turn? THEME_HIGHLIGHT: ""), Moves[move], THEME_DEFAULT,
+                    (move+2==Turn? THEME_HIGHLIGHT: ""), Moves[move+1], THEME_DEFAULT);
                     move += 2;
                 }
-                col += 19;
-                if (col+18 > w.ws_col || move >= MaxTurn) break;
+                col += width;
+                if (col+width-1 > w.ws_col || move >= MaxTurn) break;
 
                 r = row;
-                print_in(r++, col-1, "│");
-                print_in(r++, col-1, "┼");
+                printf("\e[%d;%dH%s", r++, col-1, "│");
+                printf("\e[%d;%dH%s", r++, col-1, "┼");
                 for (; r<=10; ++r){
-                    print_in(r, col-1, "│");
+                    printf("\e[%d;%dH%s", r, col-1, "│");
                 }
             }
         // 
 
-        print_in(12, 6, "");
+        printf("\e[%d;%dH%s", 12, 6, THEME_DEFAULT);
         return 0;
     }
 
     char apply_action(char* movement){
         char* move = movement+1;
-        piece* p_pc1 = get_board(move);
-        piece* p_pc2 = get_board(move+2);
+        piece* p_pc1 = BOARD(move);
+        piece* p_pc2 = BOARD(move+2);
 
-        set_board(move, p_Unoccupied);
-        set_board(move+2, p_pc1);
+        BOARD(move) = p_Unoccupied;
+        BOARD(move+2) = p_pc1;
 
         p_pc1->pos[0] = move[2]; p_pc1->pos[1] = move[3];
         p_pc1->status = MOVED_ONCE_BEFORE;
@@ -403,16 +417,18 @@
         if (p_pc1->type == PAWN
          && ((p_pc1->owner == WHITE && p_pc1->pos[1] == '8')
              || (p_pc1->owner == BLACK && p_pc1->pos[1] == '1'))){
+            printf("\e[%d;%dH%s", 14, 1, THEME_RESPONSE);
             for (char tp=1; tp<5; ++tp)
                 printf("%d: %s, ", tp, PIECE_SYMBOLS[(Turn&1)][tp]);
             printf("\b\b \n");
 
             char type=0;
             while (type<1 || 4<type){
-                printf("which type of piece do you promote to? ");
+                printf("\e[%d;%dH%s", 15, 6, THEME_PROMPT"which type of piece do you promote to? ");
                 scanf("%d", &type);
                 while (getchar() != '\n');
             }
+            printf(THEME_DEFAULT);
 
             p_pc1->type = type;
             p_pc1->symbol[0] = PIECE_SYMBOLS[(Turn&1)][type][0];
@@ -474,12 +490,12 @@
 
         for (char pl=0; pl<2; ++pl){
             for (piece* p_pc=Players[pl].pieces; p_pc<=Players[pl].pieces+15; ++p_pc){
-                set_board(p_pc->pos, p_pc);
+                BOARD(p_pc->pos) = p_pc;
             }
         }
         for (char pos[3]="a3";  pos[1]<='6'; ++pos[1]){
             for (pos[0]='a';  pos[0]<='h'; ++pos[0]){
-                set_board(pos, p_Unoccupied);
+                BOARD(pos) = p_Unoccupied;
             }
         }
 
@@ -492,7 +508,7 @@
         reset_game();
 
         char file[50];
-        printf("any game to restore? ");
+        printf(THEME_PROMPT"any game to restore?"THEME_DEFAULT" ");
         scanf("%[^\n]s", file);
         while (getchar() != '\n');
 
@@ -511,6 +527,7 @@
     void goto_term(int term){
         reset_game();
 
+        if (term > MaxTurn) term = MaxTurn;
         while (Turn<term){
             apply_action(Moves[Turn]);
         }
@@ -527,11 +544,35 @@
                 }
             }
             fclose(game);
+            printf("\e[%d;%dH%s", 14, 6, THEME_RESPONSE"successful save."THEME_DEFAULT);
+            while (getchar() != '\n');
+        } else {
+            printf("\e[%d;%dH%s", 14, 6, THEME_ERROR"no such file to save!"THEME_DEFAULT);
+            while (getchar() != '\n');
         }
     }
 
+    void help(){
+        printf(
+            "\e[%d;%dH\n"
+            "chepss is a simple chess player between two players                                                         \n"
+            "which is clear to understand, easy to modify, strong to be extended                                         \n"
+            "    and general to be used as a template for any board game                                                 \n"
+            "                                                                                                            \n"
+            "    commands:   [piece_type]<source><dist>                                                                  \n"
+            "        help                        display this help                                                       \n"
+            "        save <file>                 save the game in a plain text file, you can manually modify the file    \n"
+            "        goto [<round>[.<turn>]]     iterate the game and continue, 0 or nothing for the last action taken   \n"
+            "        exit                        exit current game and ask to restore any saved one                      \n"
+            "        quit                        quit the game                                                           \n"
+            THEME_LINK
+            "\nhttps://github.com/sirnaser/chepss.git\n"
+            THEME_DEFAULT, 13, 1);
+        while (getchar() != '\n');
+    }
+
     char get_action(char* movement){
-        printf("%i.%i> ", (Turn+1)/2, !(Turn&1));
+        printf("\e[%d;%dH%i.%i> ", 12, 6, (Turn+1)/2, !(Turn&1));
         scanf("%[^\n]s", movement);
         while (getchar() != '\n');
 
@@ -563,24 +604,39 @@
          && movement[1] == 'o'
          && movement[2] == 't'
          && movement[3] == 'o'){
-            int round, turn=0;
-            sscanf(movement+5, "%d.%d", &round, &turn);
-            goto_term(round*2-1+!(!turn));
+            if (movement[4] && '0' <= movement[5] && movement[5] <= '9'){
+                int round, turn=0;
+                sscanf(movement+5, "%d.%d", &round, &turn);
+                if (round){
+                    goto_term(round*2-1+!(!turn));
+                    return 1;
+                }
+            }
+            goto_term(MaxTurn);
             return 1;
         }
+
+        if (movement[0] == 'h'
+         && movement[1] == 'e'
+         && movement[2] == 'l'
+         && movement[3] == 'p'){
+            help();
+            return 1;
+        }
+
 
         if ('1' <= movement[1] && movement[1] <= '8'){
             for (char i=3; i >= 0; --i) movement[i+1] = movement[i];
         }
         if (not_in_board(movement+1)) return 1;
-        movement[0] = MOVEMENT_SYMBOLS[get_board(movement+1)->type];
+        movement[0] = MOVEMENT_SYMBOLS[BOARD(movement+1)->type];
         movement[5] = '\0';
 
         return 0;
     }
 
     void error_message(char error){
-        print_in(14, 4, "\e[91m");
+        printf("\e[%d;%dH%s", 14, 6, THEME_ERROR);
 
         if (1 <= error && error <= MRC_NOT_LEGAL_MOVE){
             printf("not a legal move: ");
@@ -589,7 +645,7 @@
                 if (error == 1) printf("x so low");
                 if (error == 2) printf("x so high");
                 if (error == 3) printf("y so low");
-                if (error == 4) printf("y hight");
+                if (error == 4) printf("y so hight");
             } error -= MRC_NOT_IN_BOARD;
 
             if (1 <= error && error <= MRC_NOT_IN_BOARD){
@@ -602,7 +658,7 @@
 
             if (error == 1) printf("piece is dead");
             if (error == 2) printf("piece is not yours");
-            if (error == 3) printf("dist is yours");
+            if (error == 3) printf("dist is your piece");
         } error -= MRC_NOT_LEGAL_MOVE;
 
         if (1 <= error && error <= MRC_NOT_VALID_MOVE){
@@ -655,7 +711,7 @@
             printf("not a safe move: you will checked by %s", Players[!(Turn&1)].pieces[error-1].pos);
         } error -= MRC_NOT_SAFE_MOVE;
 
-        printf("\e[37;40m");
+        printf(THEME_DEFAULT);
     }
 
     char validate_action(char* movement){
@@ -690,9 +746,9 @@
     char end_of_game(){
         if (!any_possible_move()){
             if (is_checked()){
-                printf("the game ended in checkmate.\n");
+                printf(THEME_RESPONSE"the game ended in checkmate.\n"THEME_DEFAULT);
             } else {
-                printf("the game ended in stalemate.\n");
+                printf(THEME_RESPONSE"the game ended in stalemate.\n"THEME_DEFAULT);
             }
             while (getchar() != '\n');
             return 1;
@@ -711,12 +767,12 @@
 
         // five/threefold repetition
         if (repetition >= 5){
-            printf("the game ended in fivefold repetition.\n");
+            printf(THEME_RESPONSE"the game ended in fivefold repetition.\n"THEME_DEFAULT);
             while (getchar() != '\n');
             return 1;
         }
         if (repetition >= 3){
-            printf("the game may end in threefold repetition.\n");
+            printf(THEME_RESPONSE"the game may end in threefold repetition.\n"THEME_DEFAULT);
             while (getchar() != '\n');
             return 1;
         }
@@ -750,6 +806,7 @@ int main(){
 }
 
 
+
 // naming conventions:
     // Trivial Variables: i,n,c,etc...
     // Local Variables: camelCase
@@ -776,7 +833,6 @@ int main(){
 
 
 // TODO:
-    // invalid move handling
     // castling
     // En passant
 // 

@@ -317,19 +317,17 @@
             row = 2; col = 7;
             for (char pos[3]="a1"; pos[0]<='h'; ++pos[0]){
                 for (pos[1]='1'; pos[1]<='8'; ++pos[1]){
-                    printf((pos[0]&1)^(pos[1]&1)? THEME_HIGHLIGHT: THEME_DEFAULT);
-                    if (Turn-1 >= 1 
+                    printf("\e[%d;%dH%s%s %s %s", row+('8'-pos[1]), col+(pos[0]-'a')*3, 
+                    (pos[0]&1)^(pos[1]&1)? THEME_HIGHLIGHT: "",
+                    Turn-1 >= 1 
                      && Moves[Turn-1][3] == pos[0]
-                     && Moves[Turn-1][4] == pos[1]){
-                        printf(THEME_LAST_ACTION);
-                    }
-                    printf("\e[%d;%dH %s ", row+('8'-pos[1]), col+(pos[0]-'a')*3, BOARD(pos)->symbol);
+                     && Moves[Turn-1][4] == pos[1]? THEME_LAST_ACTION: "",
+                    BOARD(pos)->symbol, THEME_DEFAULT);
                 }
             }
         // 
 
         // border and labels
-            printf(THEME_DEFAULT);
             row = 1; col = 5;
             printf("\e[%d;%dH%s", row, col+1, "╭────────────────────────╮");
             printf("\e[%d;%dH%s", row+9, col+1, "╰─a──b──c──d──e──f──g──h─╯");
@@ -341,7 +339,6 @@
         // 
 
         // dead pieces
-            printf(THEME_DEFAULT);
             char death = 0;
             row = 9; col = 2;
             for (piece* p_pc=Players[WHITE].pieces; p_pc<=Players[WHITE].pieces+15; ++p_pc){
@@ -380,8 +377,9 @@
                 printf("\e[%d;%dH%s", r++, col, "──────────────────");
                 for (; r<=10; ++r){
                     if (move >= MaxTurn) break;
-                    printf("\e[%d;%dH %-3d %s%s%s  %s%s%s ", r, col, (move+1)/2, 
-                    (move+1==Turn? THEME_HIGHLIGHT: ""), Moves[move], THEME_DEFAULT,
+                    printf("\e[%d;%dH %-3d %s%s%s  %s%s%s ", 
+                    r, col, (move+1)/2, 
+                    (move+1==Turn? THEME_HIGHLIGHT: ""), Moves[move],THEME_DEFAULT,
                     (move+2==Turn? THEME_HIGHLIGHT: ""), Moves[move+1], THEME_DEFAULT);
                     move += 2;
                 }
@@ -424,7 +422,7 @@
 
             char type=0;
             while (type<1 || 4<type){
-                printf("\e[%d;%dH%s", 15, 6, THEME_PROMPT"which type of piece do you promote to? ");
+                printf("\e[%d;%dH%s%s", 15, 6, THEME_PROMPT, "which type of piece do you promote to? ");
                 scanf("%d", &type);
                 while (getchar() != '\n');
             }
@@ -544,10 +542,10 @@
                 }
             }
             fclose(game);
-            printf("\e[%d;%dH%s", 14, 6, THEME_RESPONSE"successful save."THEME_DEFAULT);
+            printf("\e[%d;%dH%s%s%s", 14, 6, THEME_RESPONSE, "successful save.", THEME_DEFAULT);
             while (getchar() != '\n');
         } else {
-            printf("\e[%d;%dH%s", 14, 6, THEME_ERROR"no such file to save!"THEME_DEFAULT);
+            printf("\e[%d;%dH%s%s%s", 14, 6, THEME_ERROR, "no such file to save!", THEME_DEFAULT);
             while (getchar() != '\n');
         }
     }
@@ -555,19 +553,20 @@
     void help(){
         printf(
             "\e[%d;%dH\n"
-            "chepss is a simple chess player between two players                                                         \n"
-            "which is clear to understand, easy to modify, strong to be extended                                         \n"
-            "    and general to be used as a template for any board game                                                 \n"
-            "                                                                                                            \n"
-            "    commands:   [piece_type]<source><dist>                                                                  \n"
-            "        help                        display this help                                                       \n"
-            "        save <file>                 save the game in a plain text file, you can manually modify the file    \n"
-            "        goto [<round>[.<turn>]]     iterate the game and continue, 0 or nothing for the last action taken   \n"
-            "        exit                        exit current game and ask to restore any saved one                      \n"
-            "        quit                        quit the game                                                           \n"
-            THEME_LINK
-            "\nhttps://github.com/sirnaser/chepss.git\n"
-            THEME_DEFAULT, 13, 1);
+           "chepss is a simple game between two players.                                                                \n"
+           "which is clear to understand, easy to modify, strong to be extended                                         \n"
+           "    and general to be used as a template other board game.                                                  \n"
+           "                                                                                                            \n"
+           "    commands:   [piece_type]<source><dist>                                                                  \n"
+           "        help                        display this help                                                       \n"
+           "        save <file>                 save the game in a plain text file, you can manually modify the file    \n"
+           "        goto [<round>[.<turn>]]     iterate the game and continue, 0 or nothing for the last action taken   \n"
+           "        exit                        exit current game and ask to restore any saved one                      \n"
+           "        quit                        quit the game                                                           \n"
+           "\n%s"
+           "https://github.com/sirnaser/chepss.git\n"
+           "%s\n", 
+            13, 1, THEME_LINK, THEME_DEFAULT);
         while (getchar() != '\n');
     }
 
@@ -649,11 +648,11 @@
             } error -= MRC_NOT_IN_BOARD;
 
             if (1 <= error && error <= MRC_NOT_IN_BOARD){
-                printf("source position ");
-                if (error == 1) printf("low x");
-                if (error == 2) printf("high x");
-                if (error == 3) printf("low y");
-                if (error == 4) printf("hight y");
+                printf("dist position ");
+                if (error == 1) printf("x so low");
+                if (error == 2) printf("x so high");
+                if (error == 3) printf("y so low");
+                if (error == 4) printf("y so hight");
             } error -= MRC_NOT_IN_BOARD;
 
             if (error == 1) printf("piece is dead");
@@ -668,47 +667,47 @@
                 if (error == 1) printf("can not move horizontally");
                 if (error == 2) printf("white pawn first move should go upper");
                 if (error == 3) printf("black pawn first move should go lower");
-                if (error == 4) printf("more than 2 distance in first move");
+                if (error == 4) printf("can not move more than 2 distances in first move");
                 if (error == 5) printf("there is an intervening piece");
                 if (error == 6) printf("can not capture in first move");
-                if (error == 7) printf("can not move more than 1 distance (not first move)");
+                if (error == 7) printf("can not move more than 1 distance (except first move)");
             } error -= MRC_NOT_PAWN_MOVE;
 
             if (1 <= error && error <= MRC_NOT_KNIGHT_MOVE){
                 printf("knight: ");
-                if (error == 1) printf("not a knight move");
+                if (error == 1) printf("can not move like that");
             } error -= MRC_NOT_KNIGHT_MOVE;
 
             if (1 <= error && error <= MRC_NOT_BISHOP_MOVE){
                 printf("bishop: ");
                 if (error == 1) printf("not a diagonal move");
-                if (error == 2) printf("in left half can not go to the left");
-                if (error == 3) printf("in right half can not go to the right");
-                if (error == 4) printf("in lower half can not go to the lower");
-                if (error == 5) printf("in upper half can not go to the upper");
+                if (error == 2) printf("can not go left in the left half");
+                if (error == 3) printf("can not go right in the right half");
+                if (error == 4) printf("can not go lower in the lower half");
+                if (error == 5) printf("can not go upper in the upper half");
                 if (error >= 6) printf("there is an intervening piece in step %d", error-5);
             } error -= MRC_NOT_BISHOP_MOVE;
 
             if (1 <= error && error <= MRC_NOT_ROOK_MOVE){
                 printf("rook: ");
-                if (error == 1) printf("not a vertically or horizontally move");
+                if (error == 1) printf("not a vertical or horizontal move");
                 if (error >= 2) printf("there is an intervening piece in step %d", error-1);
             } error -= MRC_NOT_ROOK_MOVE;
 
             if (1 <= error && error <= MRC_NOT_QUEEN_MOVE){
                 printf("queen: ");
-                if (error == 1) printf("not any type of queen move");
+                if (error == 1) printf("is not any type of queen moves");
             } error -= MRC_NOT_QUEEN_MOVE;
 
             if (1 <= error && error <= MRC_NOT_KING_MOVE){
                 printf("king: ");
-                if (error == 1) printf("more than one horizontally distance");
-                if (error == 2) printf("more than one vertically distance");
+                if (error == 1) printf("can not move more than 1 distance horizontally");
+                if (error == 2) printf("can not move more than 1 distance vertically");
             } error -= MRC_NOT_KING_MOVE;
         } error -= MRC_NOT_VALID_MOVE;
 
         if (1 <= error && error <= MRC_NOT_SAFE_MOVE){
-            printf("not a safe move: you will checked by %s", Players[!(Turn&1)].pieces[error-1].pos);
+            printf("not a safe move: you will be checked by %s piece", Players[!(Turn&1)].pieces[error-1].pos);
         } error -= MRC_NOT_SAFE_MOVE;
 
         printf(THEME_DEFAULT);
@@ -824,17 +823,23 @@ int main(){
     // https://stackoverflow.com/questions/1722112/what-are-the-most-common-naming-conventions-in-c
 // 
 
+// validation function naming:
+    // it would be a multi value proposition
+    // terminology:
+        // is a valid move -> is valid move
+        // not a valid move -> not valid move
+// 
 
-// is a valid move
-// is valid move
-// not a valid move
-// not valid move
-
-
+// printf formatting protocol:
+    // if no identifier used, pass the theme values in format string directly
+    // otherwise use %s identifier to pass theme values as arguments
+// 
 
 // TODO:
-    // castling
-    // En passant
+    // implementing real chess validation
+        // castling
+        // En passant
 // 
 
 // be patient, if it's not as good as possible ♥️
+// https://github.com/sirnaser/chepss.git

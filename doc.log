@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.24)  30 JAN 2025 09:18
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.24)  30 JAN 2025 11:08
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -366,7 +366,7 @@ Here is how much of TeX's memory you used:
 /usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></u
 sr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr
 /local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb>
-Output written on doc.pdf (2 pages, 67279 bytes).
+Output written on doc.pdf (2 pages, 67320 bytes).
 PDF statistics:
  36 PDF objects out of 1000 (max. 8388607)
  21 compressed objects within 1 object stream

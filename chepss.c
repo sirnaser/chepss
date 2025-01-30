@@ -555,7 +555,7 @@
             "\e[%d;%dH\n"
            "chepss is a simple game between two players.                                                                \n"
            "which is clear to understand, easy to modify, strong to be extended                                         \n"
-           "    and general to be used as a template other board game.                                                  \n"
+           "    and general to be used as a template for other board games.                                                  \n"
            "                                                                                                            \n"
            "    commands:   [piece_type]<source><dist>                                                                  \n"
            "        help                        display this help                                                       \n"

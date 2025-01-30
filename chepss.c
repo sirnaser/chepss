@@ -22,8 +22,8 @@
     // 0: black, 1: red, 2: green, 3: yellow, 4: blue, 5: magenta, 6: cyan, 7: white
 
     #define THEME_DEFAULT       "\e[0m"
-    #define THEME_ERROR         "\e[1m"
-    #define THEME_RESPONSE      "\e[2m"
+    #define THEME_RESPONSE      "\e[1m"
+    #define THEME_ERROR         "\e[2m"
     #define THEME_PROMPT        "\e[3m"
     #define THEME_LINK          "\e[4m"
     #define THEME_LAST_ACTION   "\e[5m"
@@ -149,11 +149,11 @@
         } else {
             if (dif_x(move) >= 0) return 3;
         }
-        // if (move[1] <= '4'){
-        //     if (dif_y(move) <= 0) return 4;
-        // } else {
-        //     if (dif_y(move) >= 0) return 5;
-        // }
+        if (move[1] <= '4'){
+            if (dif_y(move) <= 0) return 4;
+        } else {
+            if (dif_y(move) >= 0) return 5;
+        }
         char step;
         if ((step=any_intervening_piece(move))) return 5+step;
         return 0;

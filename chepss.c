@@ -1,0 +1,784 @@
+// includes
+    #include <stdio.h>
+    #include <string.h>
+    #include <sys/ioctl.h>
+    #include <unistd.h>
+// 
+
+
+// data structures
+    // piece.owner
+        #define BLACK   0
+        #define WHITE   1
+        #define NEITHER 2
+    // 
+
+    // piece.status
+        #define DID_NOT_MOVE_YET    0
+        #define MOVED_ONCE_BEFORE   1
+        #define DEAD                2
+    // 
+
+    // piece.type
+        #define PAWN    0
+        #define KNIGHT  1
+        #define BISHOP  2
+        #define ROOK    3
+        #define QUEEN   4
+        #define KING    5
+        #define NONE    6
+    // 
+
+
+    typedef struct{
+        char owner;
+        char status;
+        char type;   
+        char pos[3];    // ex: a1
+        char symbol[5]; // ♔♕♖♗♘♙♚♛♜♝♞♟
+    } piece;
+
+    typedef struct{
+        piece pieces[16];
+        // {king, queen, rook*2, bishop*2, knight*2, pawn*8}
+    } player;
+// 
+
+// variables
+    char g_quit, g_exit;
+    int Turn, MaxTurn;
+    char Moves[1000][6];
+    player Players[2];
+    piece* Board[8][8];
+    piece* p_Unoccupied = &(piece){.owner=NEITHER, .status=DEAD, .type=NONE, .symbol=" "};
+// 
+
+// constants
+    static const char PIECE_SYMBOLS[2][7][5] = {
+        [BLACK]={[PAWN]="♙", [KNIGHT]="♘", [BISHOP]="♗", [ROOK]="♖", [QUEEN]="♕", [KING]="♔", [NONE]=" "},
+        [WHITE]={[PAWN]="♟", [KNIGHT]="♞", [BISHOP]="♝", [ROOK]="♜", [QUEEN]="♛", [KING]="♚", [NONE]=" "}
+    };
+
+    static const char MOVEMENT_SYMBOLS[7] = {
+        [PAWN]='P', [KNIGHT]='N', [BISHOP]='B', [ROOK]='R', [QUEEN]='Q', [KING]='K', [NONE]=' '
+    };
+// 
+
+
+// utility
+    void set_board(char* pos, piece* pc){
+        Board[pos[0]-'a'][pos[1]-'1'] = pc;
+    }
+
+    piece* get_board(char* pos){
+        return Board[pos[0]-'a'][pos[1]-'1'];
+    }
+
+    void print_in(int row, int col, char* str){
+        char moveCursor[20];
+        sprintf(moveCursor, "\e[%d;%dH", row, col);
+        printf("%s%s", moveCursor, str);
+    }
+// 
+
+
+// validation
+    #define abs(x)      (x>0? x: -x)
+    #define sign(x)     (x>0? 1: x<0? -1: 0)
+    #define dif_x(move) (move[2]-move[0])
+    #define dif_y(move) (move[3]-move[1])
+    #define dis_x(move) abs(dif_x(move))
+    #define dis_y(move) abs(dif_y(move))
+
+
+    #define MRC_ANY_INTERVENING_PIECE   6
+    char any_intervening_piece(char* move){
+        char dir[3] = {sign(dif_x(move)), sign(dif_y(move))};
+        char pos[3] = {move[0]+dir[0], move[1]+dir[1]};
+        char step = 1;
+        for (; pos[0]!=move[2]||pos[1]!=move[3]; ){
+            if (get_board(pos)->type != NONE){
+                return step;
+            }
+            pos[0]+=dir[0], pos[1]+=dir[1];
+            step++;
+        }
+        return 0;
+    }
+
+    #define MRC_NOT_PAWN_MOVE           7
+    char not_pawn_move(char* move){
+        // TODO : En passant
+        if (dif_x(move)) return 1;
+        if (get_board(move)->status == DID_NOT_MOVE_YET){
+            if (get_board(move)->owner == WHITE && dif_y(move) <= 0) return 2;
+            if (get_board(move)->owner == BLACK && dif_y(move) >= 0) return 3;
+            if (dis_y(move) > 2) return 4;
+            if (dis_y(move) == 2){
+                if (any_intervening_piece(move)) return 5;
+                if (get_board(move+2)->type != NONE) return 6;
+            }
+        }
+        if (get_board(move)->status == MOVED_ONCE_BEFORE 
+        && dis_y(move) > 1) return 7;
+        return 0;
+    }
+
+    #define MRC_NOT_KNIGHT_MOVE         1
+    char not_knight_move(char* move){
+        if (!(dis_x(move) == 2 && dis_y(move) == 3) 
+         && !(dis_x(move) == 3 && dis_y(move) == 2)) return 1;
+        return 0;
+    }
+
+    #define MRC_NOT_BISHOP_MOVE         5   \
+            + MRC_ANY_INTERVENING_PIECE
+    char not_bishop_move(char* move){
+        if (dis_x(move) != dis_y(move)) return 1;
+        if (move[0] <= 'd'){
+            if (dif_x(move) <= 0) return 2;
+        } else {
+            if (dif_x(move) >= 0) return 3;
+        }
+        // if (move[1] <= '4'){
+        //     if (dif_y(move) <= 0) return 4;
+        // } else {
+        //     if (dif_y(move) >= 0) return 5;
+        // }
+        char step;
+        if ((step=any_intervening_piece(move))) return 5+step;
+        return 0;
+    }
+
+    #define MRC_NOT_ROOK_MOVE           1   \
+            + MRC_ANY_INTERVENING_PIECE
+    char not_rook_move(char* move){
+        if (dif_x(move) && dif_y(move)) return 1;
+        char step;
+        if ((step=any_intervening_piece(move))) return 1+step;
+        return 0;
+    }
+
+    #define MRC_NOT_QUEEN_MOVE          1
+    char not_queen_move(char* move){
+        if (!(dis_x(move) == 1 && dis_y(move) == 2) 
+        && !(dis_x(move) == 2 && dis_y(move) == 1)
+        && not_rook_move(move)
+        && not_bishop_move(move)) return 1;
+        return 0;
+    }
+
+    #define MRC_NOT_KING_MOVE           2
+    char not_king_move(char* move){
+        // TODO : castling
+        if (dis_x(move) > 1) return 1;
+        if (dis_y(move) > 1) return 2;
+        return 0;
+    }
+
+    #define MRC_NOT_IN_BOARD            4
+    char not_in_board(char* pos){
+        if (pos[0] < 'a') return 1;
+        if ('h' < pos[0]) return 2;
+        if (pos[1] < '1') return 3;
+        if ('8' < pos[1]) return 4;
+        return 0;
+    }
+
+    #define MRC_NOT_LEGAL_MOVE          \
+            MRC_NOT_IN_BOARD*2          \
+            + 3
+    char not_legal_move(char* move){
+        char passed = 0, error;
+
+        if ((error = not_in_board(move))) return passed+error;
+        passed += MRC_NOT_IN_BOARD;
+        if ((error = not_in_board(move+2))) return passed+error;
+        passed += MRC_NOT_IN_BOARD;
+
+        piece* p_pc1 = get_board(move);
+        piece* p_pc2 = get_board(move+2);
+
+        if ((error = p_pc1->status == DEAD)) return passed+error;
+        passed++;
+        if ((error = p_pc1->owner != (Turn&1))) return passed+error;
+        passed++;
+        if ((error = p_pc2->owner == (Turn&1))) return passed+error;
+        passed++;
+
+        return 0;
+    }
+
+    #define MRC_NOT_VALID_MOVE          \
+            + MRC_NOT_PAWN_MOVE         \
+            + MRC_NOT_KNIGHT_MOVE       \
+            + MRC_NOT_BISHOP_MOVE       \
+            + MRC_NOT_ROOK_MOVE         \
+            + MRC_NOT_QUEEN_MOVE        \
+            + MRC_NOT_KING_MOVE
+    char not_valid_move(char* move){
+        char passed = 0, error;
+        char type = get_board(move)->type;
+
+        if (type == PAWN && (error = not_pawn_move(move))) return passed+error;
+        passed += MRC_NOT_PAWN_MOVE;
+        if (type == KNIGHT && (error = not_knight_move(move))) return passed+error;
+        passed += MRC_NOT_KNIGHT_MOVE;
+        if (type == BISHOP && (error = not_bishop_move(move))) return passed+error;
+        passed += MRC_NOT_BISHOP_MOVE;
+        if (type == ROOK && (error = not_rook_move(move))) return passed+error;
+        passed += MRC_NOT_ROOK_MOVE;
+        if (type == QUEEN && (error = not_queen_move(move))) return passed+error;
+        passed += MRC_NOT_QUEEN_MOVE;
+        if (type == KING && (error = not_king_move(move))) return passed+error;
+        passed += MRC_NOT_KING_MOVE;
+
+        return 0;
+    }
+
+    #define MRC_IS_CHECKED              16
+    char is_checked(){
+        char move[5] = "a1a1";
+        move[2] = Players[(Turn&1)].pieces[0].pos[0];
+        move[3] = Players[(Turn&1)].pieces[0].pos[1];
+
+        for (piece* p_pc=Players[!(Turn&1)].pieces; p_pc<=Players[!(Turn&1)].pieces+15; ++p_pc){
+            if (p_pc->status == DEAD) continue;
+            move[0] = p_pc->pos[0];
+            move[1] = p_pc->pos[1];
+            if (!not_valid_move(move)){
+                return (p_pc-Players[!(Turn&1)].pieces)+1;
+            }
+        }
+
+        return 0;
+    }
+
+    #define MRC_NOT_SAFE_MOVE           \
+            MRC_IS_CHECKED
+    char not_safe_move(char* move){
+        char error;
+        
+        piece* p_pc1 = get_board(move);
+        piece* p_pc2 = get_board(move+2);
+        piece pc1 = *p_pc1;
+        piece pc2 = *p_pc2;
+
+        // TODO : castling
+        set_board(move, p_Unoccupied);
+        set_board(move+2, p_pc1);
+        p_pc1->pos[0] = move[2]; p_pc1->pos[1] = move[3];
+        p_pc1->status = MOVED_ONCE_BEFORE;
+        p_pc2->status = DEAD;
+        error = is_checked();
+        *p_pc1 = pc1;
+        *p_pc2 = pc2;
+        set_board(move, p_pc1);
+        set_board(move+2, p_pc2);
+
+        if (error) return error;
+        return 0;
+    }
+
+    #define MRC_NOT_POSSIBLE_MOVE       \
+            MRC_NOT_LEGAL_MOVE          \
+            + MRC_NOT_VALID_MOVE        \
+            + MRC_NOT_SAFE_MOVE
+    char not_possible_move(char* move){
+        char passed = 0, error;
+
+        if ((error=not_legal_move(move))) return passed+error;
+        passed += MRC_NOT_LEGAL_MOVE;
+        if ((error=not_valid_move(move))) return passed+error;
+        passed += MRC_NOT_VALID_MOVE;
+        if ((error=not_safe_move(move))) return passed+error;
+        passed += MRC_NOT_SAFE_MOVE;
+
+        return 0;
+    }
+// 
+
+
+// game control
+    char display(){
+        printf("\e[37;40m\e[1;1H\e[2J");
+        char str[30];
+        int row, col;
+
+        // board
+            row = 2; col = 8;
+            for (char pos[3]="a1"; pos[0]<='h'; ++pos[0]){
+                for (pos[1]='1'; pos[1]<='8'; ++pos[1]){
+                    printf((pos[0]&1)^(pos[1]&1)? "\e[100m": "\e[40m");
+                    sprintf(str, " %s ", get_board(pos)->symbol);
+                    print_in(row+('8'-pos[1]), col+(pos[0]-'a')*3, str);
+                }
+            }
+        // 
+
+        // border and labels
+            row = 1; col = 6;
+            print_in(row, col+1, "╭────────────────────────╮");
+            print_in(row+9, col+1, "╰─a──b──c──d──e──f──g──h─╯");
+            for (char y[2]="8"; y[0]>='1'; --y[0]){
+                print_in(row+1+('8'-y[0]), col, y);
+                print_in(row+1+('8'-y[0]), col+1, "│");
+                print_in(row+1+('8'-y[0]), col+26, "│");
+            }
+        // 
+
+        // dead pieces
+            char death = 0;
+            row = 9; col = 2;
+            for (piece* p_pc=Players[WHITE].pieces; p_pc<=Players[WHITE].pieces+15; ++p_pc){
+                if (p_pc->status == DEAD){
+                    print_in(row-(death/2) ,col+!(death&1), p_pc->symbol);
+                    death++;
+                }
+            }
+
+            death = 0;
+            row = 2; col = 35;
+            for (piece* p_pc=Players[BLACK].pieces; p_pc<=Players[BLACK].pieces+15; ++p_pc){
+                if (p_pc->status == DEAD){
+                    print_in(row+(death/2) ,col+(death&1), p_pc->symbol);
+                    death++;
+                }
+            }
+        // 
+
+        // table of moves
+            struct winsize w;
+            ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+            int move = MaxTurn-((w.ws_col-38)/19*16);
+            if (!(move&1)) move++;
+            if (Turn-1 < move) move = Turn-1;
+            if (!(move&1)) move--;
+            if (move <= 0) move = 1;
+
+            int r;
+            row = 1; col = 39;
+            while (col+18 <= w.ws_col){
+                r = row;
+                print_in(r++, col, " No. white  black ");
+                print_in(r++, col, "──────────────────");
+                for (; r<=10; ++r){
+                    if (move >= MaxTurn) break;
+                    sprintf(str, " %-3d %s%s%s  %s%s%s ", (move+1)/2, 
+                    (move+1==Turn? "\e[100m": ""), Moves[move], (move+1==Turn? "\e[40m": ""), 
+                    (move+2==Turn? "\e[100m": ""), Moves[move+1], (move+2==Turn? "\e[40m": ""));
+                    print_in(r, col, str);
+                    move += 2;
+                }
+                col += 19;
+                if (col+18 > w.ws_col || move >= MaxTurn) break;
+
+                r = row;
+                print_in(r++, col-1, "│");
+                print_in(r++, col-1, "┼");
+                for (; r<=10; ++r){
+                    print_in(r, col-1, "│");
+                }
+            }
+        // 
+
+        print_in(12, 6, "");
+        return 0;
+    }
+
+    char apply_action(char* movement){
+        char* move = movement+1;
+        piece* p_pc1 = get_board(move);
+        piece* p_pc2 = get_board(move+2);
+
+        set_board(move, p_Unoccupied);
+        set_board(move+2, p_pc1);
+
+        p_pc1->pos[0] = move[2]; p_pc1->pos[1] = move[3];
+        p_pc1->status = MOVED_ONCE_BEFORE;
+        p_pc2->status = DEAD;
+
+        // promotion
+        if (p_pc1->type == PAWN
+         && ((p_pc1->owner == WHITE && p_pc1->pos[1] == '8')
+             || (p_pc1->owner == BLACK && p_pc1->pos[1] == '1'))){
+            for (char tp=1; tp<5; ++tp)
+                printf("%d: %s, ", tp, PIECE_SYMBOLS[(Turn&1)][tp]);
+            printf("\b\b \n");
+
+            char type=0;
+            while (type<1 || 4<type){
+                printf("which type of piece do you promote to? ");
+                scanf("%d", &type);
+                while (getchar() != '\n');
+            }
+
+            p_pc1->type = type;
+            p_pc1->symbol[0] = PIECE_SYMBOLS[(Turn&1)][type][0];
+            p_pc1->symbol[1] = PIECE_SYMBOLS[(Turn&1)][type][1];
+            p_pc1->symbol[2] = PIECE_SYMBOLS[(Turn&1)][type][2];
+        }
+
+        // TODO : castling
+
+        sprintf(Moves[Turn++], "%s", movement);
+        if (Turn>MaxTurn) MaxTurn=Turn;
+        return 0;
+    }
+
+    char reset_game(){
+        Turn = 1;
+
+        Players[BLACK] = (player){
+            {
+                {BLACK,  DID_NOT_MOVE_YET, KING,   "e8", "♔"}, 
+                {BLACK,  DID_NOT_MOVE_YET, QUEEN,  "d8", "♕"}, 
+                {BLACK,  DID_NOT_MOVE_YET, ROOK,   "a8", "♖"}, 
+                {BLACK,  DID_NOT_MOVE_YET, ROOK,   "h8", "♖"}, 
+                {BLACK,  DID_NOT_MOVE_YET, BISHOP, "c8", "♙"}, 
+                {BLACK,  DID_NOT_MOVE_YET, BISHOP, "f8", "♙"}, 
+                {BLACK,  DID_NOT_MOVE_YET, KNIGHT, "b8", "♘"}, 
+                {BLACK,  DID_NOT_MOVE_YET, KNIGHT, "g8", "♘"}, 
+                {BLACK,  DID_NOT_MOVE_YET, PAWN,   "a7", "♙"}, 
+                {BLACK,  DID_NOT_MOVE_YET, PAWN,   "b7", "♙"}, 
+                {BLACK, DID_NOT_MOVE_YET, PAWN,   "c7", "♙"}, 
+                {BLACK, DID_NOT_MOVE_YET, PAWN,   "d7", "♙"}, 
+                {BLACK, DID_NOT_MOVE_YET, PAWN,   "e7", "♙"}, 
+                {BLACK, DID_NOT_MOVE_YET, PAWN,   "f7", "♙"}, 
+                {BLACK, DID_NOT_MOVE_YET, PAWN,   "g7", "♙"}, 
+                {BLACK, DID_NOT_MOVE_YET, PAWN,   "h7", "♙"}
+            }
+        };
+
+        Players[WHITE] = (player){
+            {
+                {WHITE,  DID_NOT_MOVE_YET, KING,   "e1", "♚"}, 
+                {WHITE,  DID_NOT_MOVE_YET, QUEEN,  "d1", "♛"}, 
+                {WHITE,  DID_NOT_MOVE_YET, ROOK,   "a1", "♜"}, 
+                {WHITE,  DID_NOT_MOVE_YET, ROOK,   "h1", "♜"}, 
+                {WHITE,  DID_NOT_MOVE_YET, BISHOP, "c1", "♝"}, 
+                {WHITE,  DID_NOT_MOVE_YET, BISHOP, "f1", "♝"}, 
+                {WHITE,  DID_NOT_MOVE_YET, KNIGHT, "b1", "♞"}, 
+                {WHITE,  DID_NOT_MOVE_YET, KNIGHT, "g1", "♞"}, 
+                {WHITE,  DID_NOT_MOVE_YET, PAWN,   "a2", "♟"}, 
+                {WHITE,  DID_NOT_MOVE_YET, PAWN,   "b2", "♟"}, 
+                {WHITE, DID_NOT_MOVE_YET, PAWN,   "c2", "♟"}, 
+                {WHITE, DID_NOT_MOVE_YET, PAWN,   "d2", "♟"}, 
+                {WHITE, DID_NOT_MOVE_YET, PAWN,   "e2", "♟"}, 
+                {WHITE, DID_NOT_MOVE_YET, PAWN,   "f2", "♟"}, 
+                {WHITE, DID_NOT_MOVE_YET, PAWN,   "g2", "♟"}, 
+                {WHITE, DID_NOT_MOVE_YET, PAWN,   "h2", "♟"}
+            }
+        };
+
+        for (char pl=0; pl<2; ++pl){
+            for (piece* p_pc=Players[pl].pieces; p_pc<=Players[pl].pieces+15; ++p_pc){
+                set_board(p_pc->pos, p_pc);
+            }
+        }
+        for (char pos[3]="a3";  pos[1]<='6'; ++pos[1]){
+            for (pos[0]='a';  pos[0]<='h'; ++pos[0]){
+                set_board(pos, p_Unoccupied);
+            }
+        }
+
+        return 0;
+    }
+
+    char start_game(){
+        g_exit = 0;
+        MaxTurn = 1;
+        reset_game();
+
+        char file[50];
+        printf("any game to restore? ");
+        scanf("%[^\n]s", file);
+        while (getchar() != '\n');
+
+        FILE* game = fopen(file, "r");
+        if (game != NULL){
+            while (fscanf(game, "%s", Moves[Turn]) == 1){
+                apply_action(Moves[Turn]);
+            }
+            MaxTurn = Turn;
+            fclose(game);
+        }
+
+        return 0;
+    }
+
+    void goto_term(int term){
+        reset_game();
+
+        while (Turn<term){
+            apply_action(Moves[Turn]);
+        }
+    }
+
+    void save_game(char* file){
+        FILE* game = fopen(file, "w");
+        if (game != NULL){
+            int term = 1;
+            while (term<MaxTurn){
+                fprintf(game, "%s  ", Moves[term++]);
+                if (term<MaxTurn){
+                    fprintf(game, "%s\n", Moves[term++]);
+                }
+            }
+            fclose(game);
+        }
+    }
+
+    char get_action(char* movement){
+        printf("%i.%i> ", (Turn+1)/2, !(Turn&1));
+        scanf("%[^\n]s", movement);
+        while (getchar() != '\n');
+
+        if (movement[0] == 'q'
+         && movement[1] == 'u'
+         && movement[2] == 'i'
+         && movement[3] == 't'){
+            g_quit = 1;
+            return 1;
+        }
+
+        if (movement[0] == 'e'
+         && movement[1] == 'x'
+         && movement[2] == 'i'
+         && movement[3] == 't'){
+            g_exit = 1;
+            return 1;
+        }
+
+        if (movement[0] == 's'
+         && movement[1] == 'a'
+         && movement[2] == 'v'
+         && movement[3] == 'e'){
+            save_game(movement+5);
+            return 1;
+        }
+
+        if (movement[0] == 'g'
+         && movement[1] == 'o'
+         && movement[2] == 't'
+         && movement[3] == 'o'){
+            int round, turn=0;
+            sscanf(movement+5, "%d.%d", &round, &turn);
+            goto_term(round*2-1+!(!turn));
+            return 1;
+        }
+
+        if ('1' <= movement[1] && movement[1] <= '8'){
+            for (char i=3; i >= 0; --i) movement[i+1] = movement[i];
+        }
+        if (not_in_board(movement+1)) return 1;
+        movement[0] = MOVEMENT_SYMBOLS[get_board(movement+1)->type];
+        movement[5] = '\0';
+
+        return 0;
+    }
+
+    void error_message(char error){
+        print_in(14, 4, "\e[91m");
+
+        if (1 <= error && error <= MRC_NOT_LEGAL_MOVE){
+            printf("not a legal move: ");
+            if (1 <= error && error <= MRC_NOT_IN_BOARD){
+                printf("source position ");
+                if (error == 1) printf("x so low");
+                if (error == 2) printf("x so high");
+                if (error == 3) printf("y so low");
+                if (error == 4) printf("y hight");
+            } error -= MRC_NOT_IN_BOARD;
+
+            if (1 <= error && error <= MRC_NOT_IN_BOARD){
+                printf("source position ");
+                if (error == 1) printf("low x");
+                if (error == 2) printf("high x");
+                if (error == 3) printf("low y");
+                if (error == 4) printf("hight y");
+            } error -= MRC_NOT_IN_BOARD;
+
+            if (error == 1) printf("piece is dead");
+            if (error == 2) printf("piece is not yours");
+            if (error == 3) printf("dist is yours");
+        } error -= MRC_NOT_LEGAL_MOVE;
+
+        if (1 <= error && error <= MRC_NOT_VALID_MOVE){
+            printf("not a valid move: ");
+            if (1 <= error && error <= MRC_NOT_PAWN_MOVE){
+                printf("pawn: ");
+                if (error == 1) printf("can not move horizontally");
+                if (error == 2) printf("white pawn first move should go upper");
+                if (error == 3) printf("black pawn first move should go lower");
+                if (error == 4) printf("more than 2 distance in first move");
+                if (error == 5) printf("there is an intervening piece");
+                if (error == 6) printf("can not capture in first move");
+                if (error == 7) printf("can not move more than 1 distance (not first move)");
+            } error -= MRC_NOT_PAWN_MOVE;
+
+            if (1 <= error && error <= MRC_NOT_KNIGHT_MOVE){
+                printf("knight: ");
+                if (error == 1) printf("not a knight move");
+            } error -= MRC_NOT_KNIGHT_MOVE;
+
+            if (1 <= error && error <= MRC_NOT_BISHOP_MOVE){
+                printf("bishop: ");
+                if (error == 1) printf("not a diagonal move");
+                if (error == 2) printf("in left half can not go to the left");
+                if (error == 3) printf("in right half can not go to the right");
+                if (error == 4) printf("in lower half can not go to the lower");
+                if (error == 5) printf("in upper half can not go to the upper");
+                if (error >= 6) printf("there is an intervening piece in step %d", error-5);
+            } error -= MRC_NOT_BISHOP_MOVE;
+
+            if (1 <= error && error <= MRC_NOT_ROOK_MOVE){
+                printf("rook: ");
+                if (error == 1) printf("not a vertically or horizontally move");
+                if (error >= 2) printf("there is an intervening piece in step %d", error-1);
+            } error -= MRC_NOT_ROOK_MOVE;
+
+            if (1 <= error && error <= MRC_NOT_QUEEN_MOVE){
+                printf("queen: ");
+                if (error == 1) printf("not any type of queen move");
+            } error -= MRC_NOT_QUEEN_MOVE;
+
+            if (1 <= error && error <= MRC_NOT_KING_MOVE){
+                printf("king: ");
+                if (error == 1) printf("more than one horizontally distance");
+                if (error == 2) printf("more than one vertically distance");
+            } error -= MRC_NOT_KING_MOVE;
+        } error -= MRC_NOT_VALID_MOVE;
+
+        if (1 <= error && error <= MRC_NOT_SAFE_MOVE){
+            printf("not a safe move: you will checked by %s", Players[!(Turn&1)].pieces[error-1].pos);
+        } error -= MRC_NOT_SAFE_MOVE;
+
+        printf("\e[37;40m");
+    }
+
+    char validate_action(char* movement){
+        char error = not_possible_move(movement+1);
+        if (error){
+            error_message(error);
+            printf(" (error code: %i) ", error);
+            while (getchar() != '\n');
+            return 1;
+        }
+        return 0;
+    }
+
+    char any_possible_move(){
+        char move[5] = "a1a1";
+
+        for (piece* p_pc=Players[(Turn&1)].pieces; p_pc<=Players[(Turn&1)].pieces+15; ++p_pc){
+            move[0] = p_pc->pos[0];
+            move[1] = p_pc->pos[1];
+            for (move[3]='1';  move[3]<='8'; ++move[3]){
+                for (move[2]='a';  move[2]<='h'; ++move[2]){
+                    if (!not_possible_move(move)){
+                        return 1;
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    char end_of_game(){
+        if (!any_possible_move()){
+            if (is_checked()){
+                printf("the game ended in checkmate.\n");
+            } else {
+                printf("the game ended in stalemate.\n");
+            }
+            while (getchar() != '\n');
+            return 1;
+        }
+
+        int repetition = 0, term = Turn;
+        player players[2] = {Players[0], Players[1]};
+
+        reset_game();
+        while (Turn<term){
+            apply_action(Moves[Turn]);
+            if (!memcmp(&players, &Players, sizeof(player)*2)){
+                repetition++;
+            }
+        }
+
+        // five/threefold repetition
+        if (repetition >= 5){
+            printf("the game ended in fivefold repetition.\n");
+            while (getchar() != '\n');
+            return 1;
+        }
+        if (repetition >= 3){
+            printf("the game may end in threefold repetition.\n");
+            while (getchar() != '\n');
+            return 1;
+        }
+
+        return 0;
+    }
+// 
+
+
+int main(){
+    char action[50];
+
+    while (!g_quit) {
+        start_game();
+
+        while (!g_quit && !g_exit){
+            if (display()) continue;
+
+            if (get_action(action)) continue;
+
+            if (validate_action(action)) continue;
+
+            if (apply_action(action)) continue;
+
+            end_of_game();
+        }
+
+    }
+
+    return 0;
+}
+
+
+// naming conventions:
+    // Trivial Variables: i,n,c,etc...
+    // Local Variables: camelCase
+    // Global Variables: is trivial? add a g_ to the prefix: PascalCase
+    // Const Variables: ALL_CAPS
+    // Pointer Variables: add a p_ to the prefix. 
+    // Structs: single word? flatcase: PascalCase
+    // Struct Member Variables: camelCase
+    // Enums: single word? flatcase: PascalCase
+    // Enum Values: ALL_CAPS
+    // Functions: snake_case
+    // Macros: snake_case
+
+    // regards:
+    // https://stackoverflow.com/questions/1722112/what-are-the-most-common-naming-conventions-in-c
+// 
+
+
+// is a valid move
+// is valid move
+// not a valid move
+// not valid move
+
+
+
+// TODO:
+    // invalid move handling
+    // castling
+    // En passant
+// 
+
+// be patient, if it's not as good as possible ♥️

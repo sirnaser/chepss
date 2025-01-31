@@ -7,10 +7,5 @@
   ♟ 3│                        │      5   Pe2e4  Pe4e2 │ 13  Pe2e4  Pe4e2 
  ♟♞ 2│ ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ │      6   Pe2e4  Pe4e2 │ 14  Pe2e4  Pe4e2 
  ♜♜ 1│ ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ │      7   Pe2e4  Pe4e2 │ 15  Pe2e4   
-     ╰─a──b──c──d──e──f──g──h─╯      8   Pe2e4  Pe4e2 │ 
-
-
-
-
-
+     ╰─a──b──c──d──e──f──g──h─╯      8   Pe2e4  Pe4e2 │
 

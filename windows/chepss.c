@@ -1,8 +1,9 @@
 // includes
     #include <stdio.h>
     #include <string.h>
-    #include <sys/ioctl.h>
-    #include <unistd.h>
+    #include <windows.h>
+    // #include <sys/ioctl.h>
+    // #include <unistd.h>
 // 
 
 // theme
@@ -360,18 +361,19 @@
 
         // table of moves
             printf(THEME_DEFAULT);
-            struct winsize w;
-            ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+            // struct winsize w;
+            // ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+            // 57 = 57
 
             row = 1; col = 37;
             int width = 19, r;
-            int move = MaxTurn-((w.ws_col-col+1)/width*8*2);
+            int move = MaxTurn-((57-col+1)/width*8*2);
             if (!(move&1)) move++;
             if (Turn-1 < move) move = Turn-1;
             if (!(move&1)) move--;
             if (move <= 0) move = 1;
 
-            while (col+width-1 <= w.ws_col){
+            while (col+width-1 <= 57){
                 r = row;
                 printf("\e[%d;%dH%s", r++, col, " No. white  black ");
                 printf("\e[%d;%dH%s", r++, col, "──────────────────");
@@ -384,7 +386,7 @@
                     move += 2;
                 }
                 col += width;
-                if (col+width-1 > w.ws_col || move >= MaxTurn) break;
+                if (col+width-1 > 57 || move >= MaxTurn) break;
 
                 r = row;
                 printf("\e[%d;%dH%s", r++, col-1, "│");
@@ -625,7 +627,7 @@
 
 
         if ('1' <= movement[1] && movement[1] <= '8'){
-            for (char i=3; i >= 0; --i) movement[i+1] = movement[i];
+            for (int i=3; i >= 0; --i) movement[i+1] = movement[i];
         }
         if (not_in_board(movement+1)) return 1;
         movement[0] = MOVEMENT_SYMBOLS[BOARD(movement+1)->type];
@@ -782,6 +784,7 @@
 
 
 int main(){
+    SetConsoleOutputCP(65001);
     char action[50];
 
     while (!g_quit) {

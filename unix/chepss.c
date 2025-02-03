@@ -463,7 +463,6 @@
         // 
 
         // table of moves
-            printf(STYLE_DEFAULT);
             struct winsize w;
             ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 

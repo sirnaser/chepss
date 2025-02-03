@@ -1,6 +1,3 @@
-#define dbg(n)      printf("%s: %d\n", #n, n); getchar();
-#define dbgs(n)      printf("%s: %s\n", #n, n); getchar();
-
 // includes
     #include <stdio.h>
     #include <string.h>

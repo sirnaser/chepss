@@ -1,3 +1,3 @@
 # chepss
 
-enter ```help``` <3
+enter ```help``` .
